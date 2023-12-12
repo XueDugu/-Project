@@ -30,30 +30,40 @@ public:
     
     // 查询用户的间接朋友数量 
     int getGapFriend(int userId) {
+    	// 直接朋友 
         vector<int> directFriends = friendships[userId];
+        // 间接朋友 
         set<int> gapFriends;
+        // 遍历每个朋友 
         for(size_t i=0;i<directFriends.size();++i){
+        	// 朋友的朋友 
             vector<int> secondDegreeFriends = friendships[directFriends[i]];
             for(size_t j=0;j<secondDegreeFriends.size();++j){
 				for (size_t k = 0; k < directFriends.size(); ++k) {
+					// 确保不是用户的朋友 
     				if (directFriends[k] == secondDegreeFriends[j]) {
         				break;
     				}
+    				// 确定是用户朋友的朋友 
     				if (k == directFriends.size() - 1) {
         				gapFriends.insert(secondDegreeFriends[j]);
     				}
 				}
 			}
         }
-        return gapFriends.size();
+        // 排除用户自己 
+        return gapFriends.size()-1;
     }
 
     // 计算两个用户之间的最短社交距离
     int getShortestDistance(int startUserId, int targetUserId) {
-        if (startUserId == targetUserId) {
+        // 自己和自己的距离为0 
+		if (startUserId == targetUserId) {
             return 0;
         }
+        // 记录已有朋友关系 
         map<int, bool> visited;
+        // 暂存新一层朋友关系 
         queue<pair<int, int> > q;
         q.push({startUserId, 0});
         visited[startUserId] = true;
@@ -61,9 +71,11 @@ public:
             pair<int,int> current = q.front();
             q.pop();
             for(size_t i=0;i<friendships[current.first].size();++i){
+            	// 找到 
                 if (friendships[current.first][i]== targetUserId) {
                     return current.second + 1;
                 }
+                // 没找到，存入下一层 
                 if (!visited[friendships[current.first][i]]) {
                     q.push({friendships[current.first][i], current.second + 1});
                     visited[friendships[current.first][i]] = true;
@@ -78,6 +90,7 @@ public:
         vector<int> directFriends = friendships[a],answer(3,-1),person(3,-1);
         set<int> gapFriends;
         int count;
+        size_t index,left;
         // 找到和用户a距离大于1的所有用户
         for (size_t i = 0; i < directFriends.size(); ++i) {
             vector<int> secondDegreeFriends = friendships[directFriends[i]];
@@ -92,19 +105,28 @@ public:
                 }
             }
         }
+        // 找到最多相同好友的3个用户 
         for(set<int>::iterator it=gapFriends.begin();it!=gapFriends.end();++it){
+			// 排除自己 
+        	if(*it==a){
+        		continue;
+			}
             vector<int> userFriends = friendships[*it];
-            count = 0;
-            for(size_t i=0;i<directFriends.size();++i){
-            	for(size_t j=0;j<userFriends.size();++j){
-            		if(directFriends[i]==userFriends[j]){
-            			break;
-					}
-                	if (j==userFriends.size()-1) {
-                    	++count;
-                	}
-                }
-            }
+            count =index=left=0; 
+            // 利用数据有序性用双指针比对 
+            while(index<directFriends.size()&&left<userFriends.size()){
+            	if(directFriends[index]<userFriends[left]){
+            		++index;
+				}
+				else if(directFriends[index]>userFriends[left]){
+					++left;
+				}
+				else{
+					++index;
+					++left;
+					++count;
+				}
+			}
             if(person[0]<count){
             	person[2]=person[1];
             	person[1]=person[0];
@@ -138,7 +160,7 @@ void printGap(ofstream& file){
 int main() {
 	// 读取数据 
 	ifstream dataFile("data.txt"); 
-	int first,second,num=0,super=0;
+	int first,second,num=0,super=0,line=0;
 	vector<int> superman(1);
 	map<int,int> Super;
     SocialAnalysisNetworkSystem socialNetwork;
@@ -212,4 +234,41 @@ int main() {
 	printGap(outputFile);
     return 0;
 }
+
+/* 间接朋友第二种实现
+	int getGapFriend(int userId) {
+    	// 直接朋友 
+        vector<int> directFriends = friendships[userId];
+        // 间接朋友 
+        map<int,int> gapFriends;
+        int answer=0; 
+        // 遍历每个朋友 
+        for(size_t i=0;i<directFriends.size();++i){
+        	gapFriends[directFriends[i]]=1;
+        }
+        // 遍历每个朋友的朋友 
+        for(size_t i=0;i<directFriends.size();++i){
+            vector<int> secondDegreeFriends = friendships[directFriends[i]];
+            for(size_t j=0;j<secondDegreeFriends.size();++j){
+            	if(!gapFriends[secondDegreeFriends[j]]){
+            		gapFriends[secondDegreeFriends[j]]=1;
+            		++answer;
+				}
+			}
+        }
+        return answer;
+    }
+*/ 
+
+/* 间接朋友第三种实现
+	int getGapFriend(int userId) {
+		int answer=0;
+        for(size_t i=0;i<MAX;++i){
+            if(getShortestDistance(userId,i)==2){
+            	++answer;
+            }
+        }
+        return answer;
+    }
+*/ 
 
